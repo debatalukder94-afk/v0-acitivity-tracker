@@ -252,32 +252,7 @@ export function SocialActivitySection({ username }: SocialActivitySectionProps) 
         </Card>
       </div>
 
-      {/* Recent casts */}
-      <div className="mt-6 md:mt-10">
-        <div className="flex items-center justify-between mb-4 md:mb-6">
-          <h2 className="text-lg md:text-xl font-bold text-slate-800">Recent Casts</h2>
-          <span className="text-xs md:text-sm text-slate-400">{casts.length} casts loaded</span>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-          {casts.slice(0, 8).map((cast, i) => (
-            <div
-              key={cast.hash}
-              className="animate-in fade-in slide-in-from-bottom-4"
-              style={{ animationDelay: `${i * 50}ms` }}
-            >
-              <ActivityCard
-                content={cast.text}
-                likes={cast.reactions.likes_count}
-                comments={cast.replies.count}
-                recasts={cast.reactions.recasts_count}
-                time={formatRelativeTime(cast.timestamp)}
-              />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Share Activity Section */}
+      {/* Share Activity Section - Main Card Generation Box */}
       <ShareActivitySection username={username} />
     </div>
   )

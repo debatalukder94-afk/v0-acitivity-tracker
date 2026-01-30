@@ -5,7 +5,7 @@ import { useFarcasterUser, useFarcasterCasts, calculateEngagementStats, formatNu
 import type { NeynarUser } from "@/lib/neynar"
 import { useRef } from "react"
 import html2canvas from "html2canvas"
-import { Share2, Download } from "lucide-react"
+import { Share2, Download, Copy, Check } from "lucide-react"
 import { useState } from "react"
 
 interface ShareActivitySectionProps {
@@ -18,6 +18,32 @@ export function ShareActivitySection({ username }: ShareActivitySectionProps) {
   const engagementStats = calculateEngagementStats(casts)
   const cardRef = useRef<HTMLDivElement>(null)
   const [isDownloading, setIsDownloading] = useState(false)
+  const [isCopied, setIsCopied] = useState(false)
+
+  // Mock data for top engagers - In production, calculate from actual engagement data
+  const MOCK_TOP_ENGAGERS = [
+    {
+      username: "alice.eth",
+      display_name: "Alice Chen",
+      pfp_url: "https://i.pravatar.cc/150?u=alice&d=identicon",
+      engagement_score: 2840,
+      rank: 1,
+    },
+    {
+      username: "builder_bob",
+      display_name: "Bob Smith",
+      pfp_url: "https://i.pravatar.cc/150?u=bob&d=identicon",
+      engagement_score: 2156,
+      rank: 2,
+    },
+    {
+      username: "creator_carol",
+      display_name: "Carol Jensen",
+      pfp_url: "https://i.pravatar.cc/150?u=carol&d=identicon",
+      engagement_score: 1945,
+      rank: 3,
+    },
+  ]
 
   const isLoading = userLoading || castsLoading
 
@@ -76,19 +102,23 @@ export function ShareActivitySection({ username }: ShareActivitySectionProps) {
     }
   }
 
+  const generateShareText = () => {
+    const topEnagersText = MOCK_TOP_ENGAGERS.slice(0, 3)
+      .map((u) => `@${u.username}`)
+      .join(" ")
+
+    return `My Farcaster average engagement score is ${avgEngagement} 🚀
+Shoutout to my most based supporters:
+${topEnagersText}
+Built on Base 💙
+
+Check YOUR engagement stats and share YOUR card 👇`
+  }
+
   const handleShareToFarcaster = async () => {
     const profileUrl = `https://activity-tracker.online/profile/${user.username}`
     const cardImageUrl = `https://activity-tracker.online/api/generate-card?username=${encodeURIComponent(user.username)}&score=${avgEngagement}&displayName=${encodeURIComponent(user.display_name)}&pfpUrl=${encodeURIComponent(user.pfp_url || '')}`
-    
-    const text = `📊 Just checked my Farcaster engagement on Activity Tracker!
-
-My engagement score: ${avgEngagement}
-Username: @${user.username}
-
-Are you staying based? Check YOUR engagement stats 👇
-
-Track your activity. Know your impact. Stay Based. 🟣
-Built on /base.`
+    const shareText = generateShareText()
 
     // Detect if running in Base App
     const isInBaseApp = typeof window !== 'undefined' && (
@@ -102,7 +132,7 @@ Built on /base.`
       if ((window as any).baseApp && (window as any).baseApp.share) {
         try {
           (window as any).baseApp.share({ 
-            text: text,
+            text: shareText,
             imageUrl: cardImageUrl
           })
           return
@@ -113,7 +143,7 @@ Built on /base.`
 
       // Fallback: Copy to clipboard for Base App
       try {
-        const shareMessage = `${text}\n\n${cardImageUrl}`
+        const shareMessage = `${shareText}\n\n${cardImageUrl}\n${profileUrl}`
         await navigator.clipboard.writeText(shareMessage)
         alert('Activity card copied to clipboard! Paste in your Base App cast.')
       } catch (error) {
@@ -121,8 +151,22 @@ Built on /base.`
       }
     } else {
       // Regular web: open Farcaster compose
-      const url = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}&embeds[]=${encodeURIComponent(cardImageUrl)}&embeds[]=${encodeURIComponent(profileUrl)}`
+      const url = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&embeds[]=${encodeURIComponent(cardImageUrl)}&embeds[]=${encodeURIComponent(profileUrl)}`
       window.open(url, "_blank")
+    }
+  }
+
+  const handleCopyShareText = async () => {
+    try {
+      const shareText = generateShareText()
+      const miniAppLink = `https://activity-tracker.online/profile/${user.username}`
+      const fullText = `${shareText}\n\n🔗 Open mini app: ${miniAppLink}`
+      
+      await navigator.clipboard.writeText(fullText)
+      setIsCopied(true)
+      setTimeout(() => setIsCopied(false), 2000)
+    } catch (error) {
+      console.error('[v0] Copy failed:', error)
     }
   }
 
@@ -189,18 +233,18 @@ Built on /base.`
 
                 {/* MIDDLE SECTION - Daily Activity Stats */}
                 <div className="backdrop-blur-md bg-[#EFF6FF]/80 rounded-2xl p-4 border border-white/60 shadow-lg">
-                  <p className="text-xs font-semibold text-slate-700 mb-3 uppercase tracking-wide">Activity Summary</p>
+                  <p className="text-xs font-semibold text-slate-700 mb-3 uppercase tracking-wide">Daily Activity</p>
                   <div className="grid grid-cols-3 gap-3">
-                    {/* Likes */}
+                    {/* Casts */}
                     <div className="bg-white/50 rounded-lg p-3 text-center">
-                      <p className="text-xs text-slate-600 mb-1">Likes</p>
-                      <p className="text-xl font-bold text-slate-800">{formatNumber(engagementStats.totalLikes)}</p>
+                      <p className="text-xs text-slate-600 mb-1">Casts</p>
+                      <p className="text-xl font-bold text-slate-800">{formatNumber(engagementStats.totalRecasts)}</p>
                     </div>
 
                     {/* Recasts */}
                     <div className="bg-white/50 rounded-lg p-3 text-center">
                       <p className="text-xs text-slate-600 mb-1">Recasts</p>
-                      <p className="text-xl font-bold text-slate-800">{formatNumber(engagementStats.totalRecasts)}</p>
+                      <p className="text-xl font-bold text-slate-800">{formatNumber(engagementStats.totalLikes)}</p>
                     </div>
 
                     {/* Replies */}
@@ -211,13 +255,63 @@ Built on /base.`
                   </div>
                 </div>
 
-                {/* FOOTER - CTA Text */}
-                <div className="text-center">
-                  <p className="text-sm font-bold text-slate-800 bg-slate-100/60 py-2.5 rounded-xl">
-                    Check your score
-                  </p>
+                {/* BOTTOM SECTION - Top Engaging Users */}
+                <div className="backdrop-blur-md bg-[#EFF6FF]/80 rounded-2xl p-4 border border-white/60 shadow-lg flex-1 flex flex-col">
+                  <p className="text-xs font-semibold text-slate-700 mb-3 uppercase tracking-wide">Top Engagers</p>
+
+                  <div className="space-y-2 flex-1">
+                    {MOCK_TOP_ENGAGERS.slice(0, 3).map((engager, idx) => {
+                      const badges = ["🥇", "🥈", "🥉"]
+                      return (
+                        <div key={idx} className="flex items-center gap-3 bg-white/50 rounded-lg p-2.5">
+                          <div className="text-lg font-bold text-violet-600">{badges[idx]}</div>
+
+                          {engager.pfp_url && (
+                            <img
+                              src={engager.pfp_url}
+                              alt={engager.username}
+                              className="w-8 h-8 rounded-full border border-white/60 object-cover"
+                            />
+                          )}
+
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold text-slate-800 truncate">{engager.display_name}</p>
+                            <p className="text-xs text-slate-500 truncate">@{engager.username}</p>
+                          </div>
+
+                          <p className="text-xs font-bold text-violet-600 whitespace-nowrap">{engager.engagement_score}</p>
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Share Text Box */}
+          <div className="w-full max-w-sm">
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+              <p className="text-xs font-semibold text-slate-700 mb-3">Ready-to-Use Share Text:</p>
+              <div className="bg-white border border-slate-100 rounded-lg p-3 mb-3">
+                <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap">{generateShareText()}</p>
+              </div>
+              <button
+                onClick={handleCopyShareText}
+                className="w-full py-2 px-4 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold text-sm flex items-center justify-center gap-2 transition-all duration-300"
+              >
+                {isCopied ? (
+                  <>
+                    <Check className="w-4 h-4" />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" />
+                    Copy Text
+                  </>
+                )}
+              </button>
             </div>
           </div>
 
@@ -228,7 +322,7 @@ Built on /base.`
               className="w-full py-3 px-6 rounded-xl bg-gradient-to-r from-violet-500 to-violet-600 hover:from-violet-600 hover:to-violet-700 text-white font-semibold flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl"
             >
               <Share2 className="w-5 h-5" />
-              Share to Farcaster
+              Share Your Card
             </button>
             <button
               onClick={handleDownloadCardImage}
@@ -236,7 +330,7 @@ Built on /base.`
               className="w-full py-3 px-6 rounded-xl bg-gradient-to-r from-slate-500 to-slate-600 hover:from-slate-600 hover:to-slate-700 disabled:opacity-50 text-white font-semibold flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl"
             >
               <Download className="w-5 h-5" />
-              {isDownloading ? "Generating..." : "Download Card Image"}
+              {isDownloading ? "Generating..." : "Download Image"}
             </button>
           </div>
         </div>
