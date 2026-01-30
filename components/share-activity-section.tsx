@@ -6,6 +6,7 @@ import type { NeynarUser } from "@/lib/neynar"
 import { useRef } from "react"
 import html2canvas from "html2canvas"
 import { Share2, Download } from "lucide-react"
+import { useState } from "react"
 
 interface ShareActivitySectionProps {
   username: string
@@ -16,6 +17,7 @@ export function ShareActivitySection({ username }: ShareActivitySectionProps) {
   const { casts, isLoading: castsLoading } = useFarcasterCasts(user?.fid ?? null)
   const engagementStats = calculateEngagementStats(casts)
   const cardRef = useRef<HTMLDivElement>(null)
+  const [isDownloading, setIsDownloading] = useState(false)
 
   const isLoading = userLoading || castsLoading
 
@@ -34,6 +36,26 @@ export function ShareActivitySection({ username }: ShareActivitySectionProps) {
   }
 
   const avgEngagement = Math.round(engagementStats.engagementRate)
+
+  const handleDownloadCardImage = async () => {
+    setIsDownloading(true)
+    try {
+      const cardImageUrl = `/api/generate-card?username=${encodeURIComponent(user.username)}&score=${avgEngagement}&displayName=${encodeURIComponent(user.display_name)}&pfpUrl=${encodeURIComponent(user.pfp_url || '')}`
+      
+      const response = await fetch(cardImageUrl)
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `activity-card-${user.username}-${Date.now()}.png`
+      link.click()
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error("[v0] Failed to download card image:", error)
+    } finally {
+      setIsDownloading(false)
+    }
+  }
 
   const handleDownload = async () => {
     if (!cardRef.current) return
@@ -54,8 +76,10 @@ export function ShareActivitySection({ username }: ShareActivitySectionProps) {
     }
   }
 
-  const handleShareToFarcaster = () => {
+  const handleShareToFarcaster = async () => {
     const profileUrl = `https://activity-tracker.online/profile/${user.username}`
+    const cardImageUrl = `https://activity-tracker.online/api/generate-card?username=${encodeURIComponent(user.username)}&score=${avgEngagement}&displayName=${encodeURIComponent(user.display_name)}&pfpUrl=${encodeURIComponent(user.pfp_url || '')}`
+    
     const text = `📊 Just checked my Farcaster engagement on Activity Tracker!
 
 My engagement score: ${avgEngagement}
@@ -66,8 +90,40 @@ Are you staying based? Check YOUR engagement stats 👇
 Track your activity. Know your impact. Stay Based. 🟣
 Built on /base.`
 
-    const url = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}&embeds[]=${encodeURIComponent(profileUrl)}`
-    window.open(url, "_blank")
+    // Detect if running in Base App
+    const isInBaseApp = typeof window !== 'undefined' && (
+      window.location.hostname.includes('baseapp') || 
+      window.navigator.userAgent.includes('BaseApp') ||
+      (window as any).baseApp !== undefined
+    )
+
+    if (isInBaseApp) {
+      // Try to use Base App native share
+      if ((window as any).baseApp && (window as any).baseApp.share) {
+        try {
+          (window as any).baseApp.share({ 
+            text: text,
+            imageUrl: cardImageUrl
+          })
+          return
+        } catch (error) {
+          console.error('[v0] Base App share error:', error)
+        }
+      }
+
+      // Fallback: Copy to clipboard for Base App
+      try {
+        const shareMessage = `${text}\n\n${cardImageUrl}`
+        await navigator.clipboard.writeText(shareMessage)
+        alert('Activity card copied to clipboard! Paste in your Base App cast.')
+      } catch (error) {
+        console.error('[v0] Clipboard copy failed:', error)
+      }
+    } else {
+      // Regular web: open Farcaster compose
+      const url = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}&embeds[]=${encodeURIComponent(cardImageUrl)}&embeds[]=${encodeURIComponent(profileUrl)}`
+      window.open(url, "_blank")
+    }
   }
 
   return (
@@ -175,11 +231,12 @@ Built on /base.`
               Share to Farcaster
             </button>
             <button
-              onClick={handleDownload}
-              className="w-full py-3 px-6 rounded-xl bg-gradient-to-r from-slate-500 to-slate-600 hover:from-slate-600 hover:to-slate-700 text-white font-semibold flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl"
+              onClick={handleDownloadCardImage}
+              disabled={isDownloading}
+              className="w-full py-3 px-6 rounded-xl bg-gradient-to-r from-slate-500 to-slate-600 hover:from-slate-600 hover:to-slate-700 disabled:opacity-50 text-white font-semibold flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl"
             >
               <Download className="w-5 h-5" />
-              Download Image
+              {isDownloading ? "Generating..." : "Download Card Image"}
             </button>
           </div>
         </div>

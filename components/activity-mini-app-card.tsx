@@ -1,7 +1,8 @@
 "use client"
 
 import { useFarcasterUser, useFarcasterCasts, calculateEngagementStats, formatNumber } from "@/hooks/use-farcaster"
-import { Heart, Repeat2, MessageCircle } from "lucide-react"
+import { Heart, Repeat2, MessageCircle, Share2 } from "lucide-react"
+import { useState } from "react"
 
 interface ActivityMiniAppCardProps {
   username: string
@@ -11,6 +12,7 @@ export function ActivityMiniAppCard({ username }: ActivityMiniAppCardProps) {
   const { user, isLoading: userLoading } = useFarcasterUser(username)
   const { casts, isLoading: castsLoading } = useFarcasterCasts(user?.fid ?? null)
   const engagementStats = calculateEngagementStats(casts)
+  const [isSharing, setIsSharing] = useState(false)
 
   if (userLoading || castsLoading) {
     return (
@@ -29,6 +31,43 @@ export function ActivityMiniAppCard({ username }: ActivityMiniAppCardProps) {
   }
 
   const avgEngagement = Math.round(engagementStats.engagementRate)
+
+  const handleShare = async () => {
+    setIsSharing(true)
+    try {
+      const text = `📊 Just checked my Farcaster engagement on Activity Tracker!
+
+My engagement score: ${avgEngagement}
+Username: @${user.username}
+
+Are you staying based? Check YOUR engagement stats 👇
+
+Track your activity. Know your impact. Stay Based. 🟣
+Built on /base.`
+
+      const isInBaseApp = typeof window !== 'undefined' && (
+        window.location.hostname.includes('baseapp') || 
+        window.navigator.userAgent.includes('BaseApp') ||
+        (window as any).baseApp !== undefined
+      )
+
+      if (isInBaseApp) {
+        if ((window as any).baseApp && (window as any).baseApp.share) {
+          (window as any).baseApp.share({ text })
+        } else {
+          await navigator.clipboard.writeText(text)
+          alert('Activity copied! Paste in your Base App cast.')
+        }
+      } else {
+        const url = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}`
+        window.open(url, "_blank")
+      }
+    } catch (error) {
+      console.error('[v0] Share error:', error)
+    } finally {
+      setIsSharing(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-purple-50 to-pink-100 flex items-center justify-center p-4">
@@ -66,8 +105,13 @@ export function ActivityMiniAppCard({ username }: ActivityMiniAppCardProps) {
 
               {/* CTA Button Area */}
               <div className="w-full">
-                <button className="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-6 rounded-xl text-base transition-all duration-300">
-                  Check your score
+                <button
+                  onClick={handleShare}
+                  disabled={isSharing}
+                  className="w-full bg-gradient-to-r from-violet-600 to-violet-700 hover:from-violet-700 hover:to-violet-800 disabled:opacity-50 text-white font-bold py-3 px-6 rounded-xl text-base transition-all duration-300 flex items-center justify-center gap-2"
+                >
+                  <Share2 className="w-5 h-5" />
+                  {isSharing ? "Sharing..." : "Share Your Activity"}
                 </button>
               </div>
             </div>

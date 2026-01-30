@@ -268,3 +268,25 @@ export async function fetchTrendingCasts(limit = 10): Promise<NeynarCast[]> {
     return []
   }
 }
+
+// Get a Neynar client instance with common methods
+export function getNeynarClient() {
+  return {
+    fetchUserByUsername,
+    fetchUserByFid,
+    fetchUserCasts,
+    searchUsers,
+    fetchUserChannels,
+    fetchTrendingCasts,
+    async fetchBulkUsers(usernames: string[]): Promise<{ users: NeynarUser[] }> {
+      const users: NeynarUser[] = []
+      for (const username of usernames) {
+        const user = await fetchUserByUsername(username)
+        if (user) {
+          users.push(user)
+        }
+      }
+      return { users }
+    },
+  }
+}
