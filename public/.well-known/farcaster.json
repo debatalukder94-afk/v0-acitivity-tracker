@@ -1,0 +1,19 @@
+{
+  "accountAssociation": {
+    "header": "eyJmaWQiOjEwNjQwMDUsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHg2ZTM0Nzk5NjExMjExYTgyMWU0MGYzYkM1OTYyNDU3NDBDZThDNTcwIn0",
+    "payload": "eyJkb21haW4iOiJhY3Rpdml0eS10cmFja2VyLm9ubGluZSJ9",
+    "signature": "7mDDA2QdbV9tmNjo3d6SM3497sBhsjGaIO6oD/X+gEIT4GkRiay/4A6vmKsXzyvam9D2ySrBBPNau9UmGRFA2Rw="
+  },
+  "miniapp": {
+    "version": "1",
+    "name": "Activity Tracker",
+    "iconUrl": "https://activity-tracker.online/icon.png",
+    "homeUrl": "https://activity-tracker.online/",
+    "imageUrl": "https://activity-tracker.online/frame.png",
+    "buttonTitle": "Track Activity",
+    "splashImageUrl": "https://activity-tracker.online/icon.png",
+    "splashBackgroundColor": "#0a1628",
+    "primaryCategory": "social",
+    "tags": ["farcaster", "analytics", "tracker", "social", "stats"]
+  }
+}
